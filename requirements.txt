@@ -17,6 +17,7 @@ anthropic>=0.8.0
 
 # Google Cloud
 google-cloud-firestore>=2.13.1
+firebase-admin>=6.0.0
 
 # HTTP Client
 httpx>=0.25.0
