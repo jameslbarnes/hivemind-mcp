@@ -9,6 +9,8 @@ uvicorn[standard]>=0.24.0
 
 # Web App
 flask>=3.0.0
+flask-cors>=4.0.0
+requests>=2.31.0
 
 # Anthropic Claude
 anthropic>=0.8.0
