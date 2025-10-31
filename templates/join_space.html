@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Join Space - Hivemind{% endblock %}
+
+{% block content %}
+<div class="join-space-page">
+    <h1>Join a Space</h1>
+    <p>Enter an invite code to join an existing space</p>
+
+    <form method="POST" action="{{ url_for('join_space') }}">
+        <div class="form-group">
+            <label for="invite_code">Invite Code</label>
+            <input type="text" id="invite_code" name="invite_code" required
+                placeholder="F7D6F71B" maxlength="8" style="text-transform: uppercase;">
+            <p class="help-text">Enter the 8-character code you received</p>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Join Space</button>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+
+    <div class="info-box">
+        <h3>About Invite Codes</h3>
+        <ul>
+            <li>Invite codes are 8-character hexadecimal strings</li>
+            <li>Each space has a unique invite code</li>
+            <li>Codes don't expire (currently)</li>
+            <li>You'll be notified when you successfully join</li>
+        </ul>
+    </div>
+</div>
+
+{% endblock %}

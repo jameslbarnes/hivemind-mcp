@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}{{ space.name }} - Hivemind{% endblock %}
+
+{% block content %}
+<div class="view-space-page">
+    <div class="space-header-full">
+        <h1>{{ space.name }}</h1>
+        <span class="space-type-badge">{{ space.space_type.value }}</span>
+    </div>
+
+    <div class="space-info">
+        <div class="info-card">
+            <h3>Invite Code</h3>
+            <p><code class="invite-code-large">{{ space.invite_code }}</code></p>
+            <button class="btn btn-small" onclick="copyInviteCode('{{ space.invite_code }}')">Copy Code</button>
+        </div>
+
+        <div class="info-card">
+            <h3>Members ({{ members|length }})</h3>
+            <ul class="members-list">
+                {% for member_info in members %}
+                    <li>
+                        <strong>{{ member_info.user.display_name }}</strong>
+                        {% if member_info.user.user_id == space.created_by %}
+                            <span class="role-badge">Creator</span>
+                        {% endif %}
+                        <span class="join-date">Joined {{ member_info.joined_at|timeago }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="info-card">
+            <h3>Policy Settings</h3>
+            <div class="policy-details">
+                <h4>Includes:</h4>
+                <ul>
+                    {% for criterion in space.policy.inclusion_criteria[:3] %}
+                        <li>{{ criterion.replace('_', ' ').title() }}</li>
+                    {% endfor %}
+                </ul>
+                <h4>Excludes:</h4>
+                <ul>
+                    {% for criterion in space.policy.exclusion_criteria[:3] %}
+                        <li>{{ criterion.replace('_', ' ').title() }}</li>
+                    {% endfor %}
+                </ul>
+                <h4>Transformations:</h4>
+                <ul>
+                    {% if space.policy.transformation_rules.remove_names %}
+                        <li>Remove names</li>
+                    {% endif %}
+                    {% if space.policy.transformation_rules.preserve_emotional_tone %}
+                        <li>Preserve emotional tone</li>
+                    {% endif %}
+                    {% if space.policy.transformation_rules.generalize_situations %}
+                        <li>Generalize situations</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <h2>Space Privacy Contract</h2>
+
+    <div class="policy-contract">
+        <div class="info-card contract-editor">
+            <h3>How Conversations Are Transformed</h3>
+            <p class="contract-description">
+                This is the agreement between space members. When you log a conversation, Claude evaluates it with these instructions.
+                <strong>This prompt is the only thing that determines what gets shared.</strong>
+            </p>
+
+            <label for="custom-prompt"><strong>Transformation Instructions:</strong></label>
+            <textarea id="custom-prompt" rows="10" placeholder="Example:
+
+- Only share the emotional state and general topic
+- Remove all names, places, companies, and specific details
+- Preserve the tone (stressed, excited, worried, etc.)
+- Keep insights and learnings but anonymize the context
+- If discussing technical work, share the pattern learned but not the implementation">{{ space.policy.transformation_rules.custom_prompt or 'Default: Share general insights while preserving privacy. Remove names, locations, and specific identifying details.' }}</textarea>
+
+            <div class="contract-actions">
+                <button class="btn btn-primary" onclick="savePolicy()">💾 Save Contract</button>
+                <button class="btn btn-secondary" onclick="backtestPolicy()">🔍 Test on Past Conversations</button>
+                <button class="btn btn-secondary" onclick="showFullPrompt()">👁️ View Full System Prompt</button>
+            </div>
+        </div>
+
+        <div id="full-prompt-view" class="info-card" style="display: none;">
+            <h3>Full System Prompt (What Claude Sees)</h3>
+            <p>This is the complete prompt sent to Claude for evaluation:</p>
+            <pre id="full-prompt-content" style="background: #f5f5f5; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.85rem;"></pre>
+            <button class="btn btn-small" onclick="document.getElementById('full-prompt-view').style.display='none'">Close</button>
+        </div>
+
+        <div id="backtest-results" class="info-card" style="display: none;">
+            <h3>Backtest Results</h3>
+            <p>See how your current contract would transform previous conversations:</p>
+            <div id="backtest-content"></div>
+        </div>
+    </div>
+
+    <h2>Conversation Feed</h2>
+
+    {% if conversations %}
+        <div class="conversation-feed">
+            {% for conv in conversations %}
+                <div class="conversation-item">
+                    <div class="conv-header">
+                        <span class="timestamp">{{ conv.timestamp|timeago }}</span>
+                    </div>
+                    <div class="conv-body">
+                        <div class="conversation-summary">
+                            {{ conv.user_message }}
+                        </div>
+                        {% if conv.assistant_message and conv.assistant_message != conv.user_message %}
+                            <div class="related-context">
+                                <strong>Related context:</strong> {{ conv.assistant_message }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <p>No conversations yet. Start sharing content to see it here!</p>
+        </div>
+    {% endif %}
+
+    <div class="space-actions">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyInviteCode(code) {
+    navigator.clipboard.writeText(code).then(() => {
+        alert('Invite code copied to clipboard!');
+    });
+}
+
+async function savePolicy() {
+    const customPrompt = document.getElementById('custom-prompt').value;
+
+    try {
+        const response = await fetch('/spaces/{{ space.space_id }}/policy/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                custom_prompt: customPrompt
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            alert('Policy updated successfully!');
+        } else {
+            alert('Error updating policy: ' + data.error);
+        }
+    } catch (error) {
+        alert('Error: ' + error);
+    }
+}
+
+async function showFullPrompt() {
+    const promptDiv = document.getElementById('full-prompt-view');
+    const contentDiv = document.getElementById('full-prompt-content');
+
+    promptDiv.style.display = 'block';
+    contentDiv.textContent = 'Loading...';
+
+    try {
+        const response = await fetch('/spaces/{{ space.space_id }}/full_prompt');
+        const data = await response.json();
+
+        if (data.success) {
+            contentDiv.textContent = data.prompt;
+        } else {
+            contentDiv.textContent = 'Error: ' + data.error;
+        }
+    } catch (error) {
+        contentDiv.textContent = 'Error: ' + error;
+    }
+}
+
+async function backtestPolicy() {
+    const resultsDiv = document.getElementById('backtest-results');
+    const contentDiv = document.getElementById('backtest-content');
+
+    resultsDiv.style.display = 'block';
+    contentDiv.innerHTML = '<p>Running backtest...</p>';
+
+    try {
+        const response = await fetch('/spaces/{{ space.space_id }}/backtest', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            let html = '<div class="backtest-results">';
+            data.results.forEach(result => {
+                html += `
+                    <div class="backtest-item">
+                        <div class="backtest-header">
+                            <strong>${result.turn_id}</strong>
+                            <span class="timestamp">${new Date(result.timestamp).toLocaleString()}</span>
+                            <span class="badge badge-${result.action === 'shared' ? 'success' : 'neutral'}">${result.action}</span>
+                        </div>
+                        <div class="backtest-body">
+                            <p><strong>Original:</strong> ${result.user_message}</p>
+                            ${result.transformed_content ? `<p><strong>Transformed:</strong> ${result.transformed_content}</p>` : ''}
+                            <p><strong>Reason:</strong> ${result.reason}</p>
+                            ${result.confidence ? `
+                                <div class="scores">
+                                    <span>Confidence: ${(result.confidence * 100).toFixed(0)}%</span>
+                                    <span>Sensitivity: ${(result.sensitivity * 100).toFixed(0)}%</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            contentDiv.innerHTML = html;
+        } else {
+            contentDiv.innerHTML = '<p class="error">Error: ' + data.error + '</p>';
+        }
+    } catch (error) {
+        contentDiv.innerHTML = '<p class="error">Error: ' + error + '</p>';
+    }
+}
+</script>
+{% endblock %}

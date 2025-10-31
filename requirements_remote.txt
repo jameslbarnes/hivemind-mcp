@@ -1,0 +1,17 @@
+# Requirements for Hivemind Remote MCP Connector
+
+# Core MCP
+mcp>=0.9.0
+
+# Web server
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# Async HTTP client
+httpx>=0.25.0
+
+# Async support
+asyncio>=3.4.3
+
+# Existing hivemind requirements
+# (add your existing requirements here)

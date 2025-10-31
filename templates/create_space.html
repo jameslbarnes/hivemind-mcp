@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Create Space - Hivemind{% endblock %}
+
+{% block content %}
+<div class="create-space-page">
+    <h1>Create a New Space</h1>
+    <p>Define your space's purpose and choose a privacy contract</p>
+
+    <form method="POST" action="{{ url_for('create_space') }}" id="create-space-form">
+        <div class="form-group">
+            <label for="name">Space Name</label>
+            <input type="text" id="name" name="name" required
+                placeholder="e.g., Andrew & Jamila, Team Alpha, Learning Community">
+        </div>
+
+        <div class="form-group">
+            <label for="space_type">Space Type</label>
+            <select id="space_type" name="space_type" required>
+                <option value="1:1">One-on-One (max 2 members)</option>
+                <option value="group">Group (unlimited members)</option>
+                <option value="public">Public Feed (discoverable)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Privacy Contract Template</label>
+            <p class="template-help-text">
+                Choose how conversations will be transformed before sharing in this space.
+                <strong>This is the agreement between members about what gets shared.</strong>
+            </p>
+
+            <input type="hidden" id="policy_template" name="policy_template" value="emotional_only" required>
+
+            <div class="template-cards">
+                {% for template_id, template in templates.items() %}
+                {% if template_id != 'custom' %}
+                <div class="template-card" data-template-id="{{ template_id }}" onclick="selectTemplate('{{ template_id }}')">
+                    <h3>{{ template.name }}</h3>
+                    <p class="template-description">{{ template.description }}</p>
+                    <div class="template-preview">
+                        <strong>Example transformation:</strong>
+                        <pre>{{ template.prompt.split('Example transformation:')[-1].strip()[:200] if 'Example transformation:' in template.prompt else template.prompt[:200] }}...</pre>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+
+                <!-- Custom template option -->
+                <div class="template-card" data-template-id="custom" onclick="selectTemplate('custom')">
+                    <h3>{{ templates.custom.name }}</h3>
+                    <p class="template-description">{{ templates.custom.description }}</p>
+                    <div class="template-preview">
+                        <strong>Note:</strong> You'll write your own transformation instructions after creating the space.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="policy-preview" id="policy-preview" style="display: none;">
+            <h3>Full Contract Preview</h3>
+            <div class="info-card">
+                <pre id="full-contract-text"></pre>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Space</button>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Store all templates
+const templates = {{ templates|tojson }};
+let selectedTemplate = 'emotional_only';
+
+function selectTemplate(templateId) {
+    selectedTemplate = templateId;
+
+    // Update hidden input
+    document.getElementById('policy_template').value = templateId;
+
+    // Update card styling
+    document.querySelectorAll('.template-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    document.querySelector(`[data-template-id="${templateId}"]`).classList.add('selected');
+
+    // Show full contract preview
+    const template = templates[templateId];
+    const previewDiv = document.getElementById('policy-preview');
+    const contractText = document.getElementById('full-contract-text');
+
+    if (template.prompt) {
+        contractText.textContent = template.prompt;
+        previewDiv.style.display = 'block';
+    } else {
+        previewDiv.style.display = 'none';
+    }
+}
+
+// Select the first template by default
+document.addEventListener('DOMContentLoaded', () => {
+    selectTemplate('emotional_only');
+});
+</script>
+
+<style>
+.create-space-page {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.template-help-text {
+    font-size: 0.95rem;
+    color: #666;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background-color: #f0f8ff;
+    border-radius: 4px;
+}
+
+.template-help-text strong {
+    color: #2c3e50;
+}
+
+.template-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.template-card {
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+}
+
+.template-card:hover {
+    border-color: #3498db;
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+}
+
+.template-card.selected {
+    border-color: #3498db;
+    background-color: #f0f8ff;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.template-card h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    color: #2c3e50;
+}
+
+.template-description {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 0.75rem;
+}
+
+.template-preview {
+    font-size: 0.85rem;
+    color: #555;
+    background: #f9f9f9;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-top: 0.75rem;
+}
+
+.template-preview strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+}
+
+.template-preview pre {
+    margin: 0;
+    white-space: pre-wrap;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.policy-preview {
+    margin: 2rem 0;
+}
+
+.policy-preview h3 {
+    margin-bottom: 1rem;
+}
+
+#full-contract-text {
+    background: #f5f5f5;
+    padding: 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    font-family: 'Courier New', monospace;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+</style>
+{% endblock %}

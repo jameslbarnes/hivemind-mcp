@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Hivemind - Welcome{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1>Welcome to Hivemind</h1>
+    <p class="tagline">AI-native social network with policy-based sharing</p>
+
+    <div class="features">
+        <div class="feature">
+            <h3>Multi-Space Architecture</h3>
+            <p>Create different spaces (couples, teams, public) with unique sharing policies</p>
+        </div>
+        <div class="feature">
+            <h3>Consent Layer</h3>
+            <p>Review and approve what gets shared before it goes to any space</p>
+        </div>
+        <div class="feature">
+            <h3>Privacy First</h3>
+            <p>Content is filtered based on your policies - names removed, situations generalized</p>
+        </div>
+    </div>
+
+    <div class="cta">
+        <a href="{{ url_for('login') }}" class="btn btn-primary">Get Started</a>
+    </div>
+</div>
+
+<div class="about">
+    <h2>How It Works</h2>
+    <ol>
+        <li>Create spaces with different policies (couples, team, public feed)</li>
+        <li>Have conversations with your AI assistant</li>
+        <li>Conversations route through policies to relevant spaces</li>
+        <li>Review and approve what gets shared (consent layer)</li>
+        <li>Connect with others through filtered, privacy-preserving content</li>
+    </ol>
+</div>
+{% endblock %}

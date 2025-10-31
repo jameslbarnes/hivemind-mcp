@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Hivemind{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="{{ url_for('index') }}">Hivemind</a>
+        </div>
+        <div class="nav-links">
+            {% if session.user_id %}
+                <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                <a href="{{ url_for('create_space') }}">Create Space</a>
+                <a href="{{ url_for('join_space') }}">Join Space</a>
+                <a href="{{ url_for('view_approvals') }}">
+                    Approvals
+                    {% if pending_count and pending_count > 0 %}
+                        <span class="badge">{{ pending_count }}</span>
+                    {% endif %}
+                </a>
+                <a href="{{ url_for('view_notifications') }}">
+                    Notifications
+                    {% if unread_count and unread_count > 0 %}
+                        <span class="badge">{{ unread_count }}</span>
+                    {% endif %}
+                </a>
+                <a href="{{ url_for('oauth_credentials') }}">MCP Connector</a>
+                <a href="{{ url_for('logout') }}">Logout</a>
+            {% else %}
+                <a href="{{ url_for('login') }}">Login</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer>
+        <p>Hivemind - AI-Native Social Network | Multi-Space Policy Engine</p>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

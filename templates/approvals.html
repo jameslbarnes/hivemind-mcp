@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Approvals - Hivemind{% endblock %}
+
+{% block content %}
+<div class="approvals-page">
+    <h1>Pending Approvals</h1>
+    <p class="subtitle">Review and approve what gets shared to your spaces</p>
+
+    <div class="consent-layer-info">
+        <h3>About the Consent Layer</h3>
+        <p>This is where you review content before it's shared. You can:</p>
+        <ul>
+            <li><strong>Approve</strong> - Share as-is</li>
+            <li><strong>Edit & Approve</strong> - Modify content before sharing</li>
+            <li><strong>Reject</strong> - Don't share this content</li>
+        </ul>
+    </div>
+
+    {% if approvals %}
+        {% for item in approvals %}
+            <div class="approval-card">
+                <div class="approval-header">
+                    <h3>{{ item.space.name }}</h3>
+                    <span class="space-type-badge">{{ item.space.space_type.value }}</span>
+                </div>
+
+                <div class="approval-body">
+                    <div class="approval-section">
+                        <h4>Original Content:</h4>
+                        <div class="original-content">
+                            {{ item.approval.source_turn_id }}
+                        </div>
+                    </div>
+
+                    <div class="approval-section">
+                        <h4>Filtered Content (what would be shared):</h4>
+                        <div class="proposed-content">
+                            <textarea id="content-{{ item.approval.approval_id }}"
+                                rows="4" style="width: 100%; margin-bottom: 10px;">{{ item.approval.proposed_content }}</textarea>
+                            <p class="help-text">You can edit this before approving</p>
+                        </div>
+                    </div>
+
+                    <div class="approval-section">
+                        <h4>Why Does This Need Approval?</h4>
+                        <p class="reason">{{ item.approval.reason_for_approval }}</p>
+                    </div>
+
+                    <div class="approval-scores">
+                        <div class="score-item">
+                            <span class="score-label">Confidence:</span>
+                            <div class="score-bar">
+                                <div class="score-fill" style="width: {{ item.approval.confidence_score * 100 }}%"></div>
+                            </div>
+                            <span class="score-value">{{ '%.0f'|format(item.approval.confidence_score * 100) }}%</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Sensitivity:</span>
+                            <div class="score-bar">
+                                <div class="score-fill sensitivity" style="width: {{ item.approval.sensitivity_score * 100 }}%"></div>
+                            </div>
+                            <span class="score-value">{{ '%.0f'|format(item.approval.sensitivity_score * 100) }}%</span>
+                        </div>
+                    </div>
+
+                    <div class="approval-meta">
+                        <p class="expires-at">Expires: {{ item.approval.expires_at|timeago }}</p>
+                    </div>
+                </div>
+
+                <div class="approval-actions">
+                    <form method="POST" action="{{ url_for('approve_disclosure', approval_id=item.approval.approval_id) }}" style="display: inline;">
+                        <input type="hidden" name="edited_content"
+                            value="{{ item.approval.proposed_content }}">
+                        <button type="submit" class="btn btn-success">
+                            Approve & Share
+                        </button>
+                    </form>
+
+                    <button type="button" class="btn btn-primary" onclick="approveEdited('{{ item.approval.approval_id }}')">
+                        Edit & Approve
+                    </button>
+
+                    <form method="POST" action="{{ url_for('reject_disclosure', approval_id=item.approval.approval_id) }}" style="display: inline;">
+                        <button type="submit" class="btn btn-danger">
+                            Reject
+                        </button>
+                    </form>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <h3>No Pending Approvals</h3>
+            <p>You don't have any content waiting for approval right now.</p>
+            <p>When conversations are flagged as high-sensitivity or low-confidence, they'll appear here for review.</p>
+        </div>
+    {% endif %}
+
+    <div class="actions">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function approveEdited(approvalId) {
+    const textarea = document.getElementById(`content-${approvalId}`);
+    const editedContent = textarea.value;
+
+    // Create form and submit
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/approvals/${approvalId}/approve`;
+
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'edited_content';
+    input.value = editedContent;
+
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
+{% endblock %}

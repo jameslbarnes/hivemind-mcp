@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Hivemind{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1>Welcome, {{ user.display_name }}!</h1>
+
+    <div class="stats">
+        <div class="stat-card">
+            <h3>{{ spaces|length }}</h3>
+            <p>Spaces</p>
+        </div>
+        <div class="stat-card">
+            <h3>{{ pending_count }}</h3>
+            <p>Pending Approvals</p>
+        </div>
+        <div class="stat-card">
+            <h3>{{ unread_count }}</h3>
+            <p>Unread Notifications</p>
+        </div>
+    </div>
+
+    <div class="actions">
+        <a href="{{ url_for('create_space') }}" class="btn btn-primary">Create New Space</a>
+        <a href="{{ url_for('join_space') }}" class="btn btn-secondary">Join with Invite Code</a>
+    </div>
+
+    <h2>Your Spaces</h2>
+
+    {% if spaces %}
+        <div class="spaces-grid">
+            {% for space in spaces %}
+                <div class="space-card">
+                    <div class="space-header">
+                        <h3>{{ space.name }}</h3>
+                        <span class="space-type">{{ space.space_type.value }}</span>
+                    </div>
+                    <div class="space-body">
+                        <p>Members: {{ space.members|length }}</p>
+                        <p>Invite Code: <code>{{ space.invite_code }}</code></p>
+                        <p class="policy-info">
+                            Policy: {{ space.policy.policy_id.split('_')[0] }}
+                        </p>
+                    </div>
+                    <div class="space-footer">
+                        <a href="{{ url_for('view_space', space_id=space.space_id) }}" class="btn btn-small">View Space</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <p>You haven't joined any spaces yet.</p>
+            <p>Create your first space or join one with an invite code!</p>
+        </div>
+    {% endif %}
+
+    <h2>Recent Conversations</h2>
+    {% if conversations %}
+        <div class="conversation-timeline">
+            {% for conv in conversations %}
+                <div class="conversation-card">
+                    <div class="conversation-header">
+                        <span class="conversation-time">{{ conv.timestamp.strftime('%Y-%m-%d %H:%M') }}</span>
+                        <span class="conversation-id">{{ conv.turn_id }}</span>
+                    </div>
+
+                    <div class="conversation-summary">
+                        <div class="summary-content">
+                            {{ conv.user_message }}
+                        </div>
+                        {% if conv.assistant_message and conv.assistant_message != conv.user_message %}
+                            <div class="related-context">
+                                <strong>Related context:</strong> {{ conv.assistant_message }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="routing-results">
+                        <h4>Policy Routing Results:</h4>
+                        {% for result in conv.routing_results %}
+                            <div class="routing-result routing-{{ result.action }}">
+                                <div class="result-header">
+                                    {% if result.action == 'shared' %}
+                                        <span class="result-icon">✓</span>
+                                        <strong>{{ result.space_name }}</strong>
+                                        <span class="result-badge badge-success">Shared</span>
+                                    {% elif result.action == 'approval_needed' %}
+                                        <span class="result-icon">⏸</span>
+                                        <strong>{{ result.space_name }}</strong>
+                                        <span class="result-badge badge-warning">Needs Approval</span>
+                                    {% elif result.action == 'skipped' %}
+                                        <span class="result-icon">⊘</span>
+                                        <strong>{{ result.space_name }}</strong>
+                                        <span class="result-badge badge-neutral">Skipped</span>
+                                    {% endif %}
+                                </div>
+                                <div class="result-details">
+                                    <div class="result-reason">{{ result.reason }}</div>
+                                    {% if result.confidence_score is not none %}
+                                        <div class="result-scores">
+                                            <span class="score">Confidence: {{ "%.0f"|format(result.confidence_score * 100) }}%</span>
+                                            <span class="score">Sensitivity: {{ "%.0f"|format(result.sensitivity_score * 100) }}%</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if result.filtered_content and result.filtered_content != result.original_content %}
+                                        <details class="content-transform">
+                                            <summary>View transformation</summary>
+                                            <div class="content-comparison">
+                                                <div><strong>Original:</strong> {{ result.original_content[:150] }}...</div>
+                                                <div><strong>Filtered:</strong> {{ result.filtered_content[:150] }}...</div>
+                                            </div>
+                                        </details>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <p>No conversations logged yet.</p>
+            <p>Connect Claude Desktop using the MCP Connector to start logging conversations!</p>
+        </div>
+    {% endif %}
+
+    <h2>Test the Policy Engine</h2>
+    <div class="test-section">
+        <p>Simulate a conversation to see how it routes through your spaces:</p>
+
+        <form id="simulate-form">
+            <div class="form-group">
+                <label for="user_message">Your Message</label>
+                <textarea id="user_message" name="user_message" rows="3" required
+                    placeholder="I'm feeling stressed about work lately"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-secondary">Simulate Routing</button>
+        </form>
+
+        <div id="simulation-result" style="display: none;"></div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('simulate-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const userMessage = document.getElementById('user_message').value;
+    const resultDiv = document.getElementById('simulation-result');
+
+    try {
+        const response = await fetch('/api/simulate_conversation', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                user_message: userMessage
+            })
+        });
+
+        const data = await response.json();
+
+        resultDiv.innerHTML = `
+            <div class="simulation-result">
+                <h4>Routing Results:</h4>
+                <p><strong>Shared to:</strong> ${data.shared_to.join(', ') || 'None'}</p>
+                <p><strong>Needs approval:</strong> ${data.approvals_needed.join(', ') || 'None'}</p>
+                <p><strong>Total spaces processed:</strong> ${data.total_spaces}</p>
+            </div>
+        `;
+        resultDiv.style.display = 'block';
+
+        if (data.approvals_needed.length > 0) {
+            resultDiv.innerHTML += '<p class="info">Check the Approvals page to review pending content!</p>';
+        }
+    } catch (error) {
+        resultDiv.innerHTML = '<p class="error">Error simulating conversation</p>';
+        resultDiv.style.display = 'block';
+    }
+});
+</script>
+{% endblock %}

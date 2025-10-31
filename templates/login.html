@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Hivemind{% endblock %}
+
+{% block content %}
+<div class="login-page">
+    <div class="login-box">
+        <h1>Login to Hivemind</h1>
+        <p>Enter your username to continue (demo mode - no password required)</p>
+
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required placeholder="Andrew Miller">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email (optional)</label>
+                <input type="email" id="email" name="email" placeholder="andrew@example.com">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+
+        <p class="note">This is a demo. In production, proper authentication would be required.</p>
+    </div>
+</div>
+{% endblock %}

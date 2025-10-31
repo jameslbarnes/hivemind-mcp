@@ -1,0 +1,16 @@
+type: service
+
+image: hivemind-tee-api:latest
+
+env:
+  - ANTHROPIC_API_KEY
+  - GOOGLE_APPLICATION_CREDENTIALS=/secrets/firestore-key.json
+  - FIRESTORE_PROJECT
+
+port: 8000
+
+resources:
+  memory: 4GB
+
+commands:
+  - python src/tee_api.py

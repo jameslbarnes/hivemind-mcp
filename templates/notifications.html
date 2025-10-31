@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications - Hivemind{% endblock %}
+
+{% block content %}
+<div class="notifications-page">
+    <h1>Notifications</h1>
+
+    {% if notifications %}
+        <div class="notifications-list">
+            {% for notif in notifications %}
+                <div class="notification-item {% if not notif.read %}unread{% endif %}">
+                    <div class="notif-icon">
+                        {% if notif.type == 'member_joined' %}
+                            <span class="icon">👥</span>
+                        {% elif notif.type == 'content_shared' %}
+                            <span class="icon">📄</span>
+                        {% elif notif.type == 'approval_needed' %}
+                            <span class="icon">⚠️</span>
+                        {% else %}
+                            <span class="icon">🔔</span>
+                        {% endif %}
+                    </div>
+                    <div class="notif-body">
+                        <p class="notif-message">{{ notif.message }}</p>
+                        <p class="notif-time">{{ notif.timestamp|timeago }}</p>
+                    </div>
+                    {% if notif.space_id %}
+                        <div class="notif-action">
+                            <a href="{{ url_for('view_space', space_id=notif.space_id) }}" class="btn btn-small">View Space</a>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h3>No Notifications</h3>
+            <p>You don't have any notifications yet.</p>
+        </div>
+    {% endif %}
+
+    <div class="actions">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+</div>
+
+{% endblock %}
