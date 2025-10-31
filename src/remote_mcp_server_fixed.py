@@ -50,7 +50,9 @@ CONFIGURED_USER_ID = os.getenv("SCRIBE_USER_ID", "usr_6acf10ca")
 logger.info(f"MCP server configured for user: {CONFIGURED_USER_ID}")
 
 # Initialize managers with Firestore
-FIREBASE_CREDS = r"C:\Users\james\Downloads\hivemind-476519-d174ae36378a.json"
+# On Railway, credentials come from GOOGLE_APPLICATION_CREDENTIALS_JSON env var
+# Locally, we can use a file path
+FIREBASE_CREDS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON") or r"C:\Users\james\Downloads\hivemind-476519-d174ae36378a.json"
 space_manager = SpaceManager(use_firestore=True, credentials_path=FIREBASE_CREDS)
 
 # Cleanup expired tokens on startup
