@@ -28,14 +28,26 @@ class FirestoreBackend:
         Initialize Firestore backend.
 
         Args:
-            credentials_path: Path to Firebase credentials JSON file.
+            credentials_path: Path to Firebase credentials JSON file OR JSON string content.
                             If None, uses GOOGLE_APPLICATION_CREDENTIALS env var.
         """
+        import json
+
         # Initialize Firebase Admin (only if not already initialized)
         if not firebase_admin._apps:
             if credentials_path:
-                cred = credentials.Certificate(credentials_path)
-                firebase_admin.initialize_app(cred)
+                # Check if it's a JSON string (starts with '{') or a file path
+                if credentials_path.strip().startswith('{'):
+                    # It's JSON content - parse it
+                    cred_dict = json.loads(credentials_path)
+                    cred = credentials.Certificate(cred_dict)
+                    firebase_admin.initialize_app(cred)
+                elif os.path.exists(credentials_path):
+                    # It's a file path that exists
+                    cred = credentials.Certificate(credentials_path)
+                    firebase_admin.initialize_app(cred)
+                else:
+                    raise ValueError(f"credentials_path is neither valid JSON nor an existing file: {credentials_path[:100]}...")
             else:
                 # Try to use environment variable
                 cred_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
