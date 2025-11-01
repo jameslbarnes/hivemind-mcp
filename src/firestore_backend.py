@@ -51,6 +51,12 @@ class FirestoreBackend:
                         except json.JSONDecodeError as e2:
                             raise ValueError(f"Failed to parse credentials JSON: {e}. Make sure the JSON is properly formatted. Error at position {e.pos}: {credentials_path[max(0,e.pos-20):e.pos+20]}")
 
+                    # Fix private_key: Firebase needs actual newlines, not \n text
+                    # The JSON may have literal \n in the string which needs to be converted to actual newlines
+                    if 'private_key' in cred_dict and '\\n' in cred_dict['private_key']:
+                        # Replace the escaped newlines with actual newlines
+                        cred_dict['private_key'] = cred_dict['private_key'].replace('\\n', '\n')
+
                     cred = credentials.Certificate(cred_dict)
                     firebase_admin.initialize_app(cred)
                 elif os.path.exists(credentials_path):
