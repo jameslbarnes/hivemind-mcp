@@ -39,7 +39,18 @@ class FirestoreBackend:
                 # Check if it's a JSON string (starts with '{') or a file path
                 if credentials_path.strip().startswith('{'):
                     # It's JSON content - parse it
-                    cred_dict = json.loads(credentials_path)
+                    try:
+                        # Try parsing with strict=False to handle control characters
+                        cred_dict = json.loads(credentials_path, strict=False)
+                    except json.JSONDecodeError as e:
+                        # If that fails, try escaping common issues
+                        try:
+                            # Replace literal newlines with escaped ones
+                            cleaned = credentials_path.replace('\n', '\\n').replace('\r', '')
+                            cred_dict = json.loads(cleaned, strict=False)
+                        except json.JSONDecodeError as e2:
+                            raise ValueError(f"Failed to parse credentials JSON: {e}. Make sure the JSON is properly formatted. Error at position {e.pos}: {credentials_path[max(0,e.pos-20):e.pos+20]}")
+
                     cred = credentials.Certificate(cred_dict)
                     firebase_admin.initialize_app(cred)
                 elif os.path.exists(credentials_path):
