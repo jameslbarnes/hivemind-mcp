@@ -37,9 +37,17 @@ from src.models import (
     RawConversationTurn, SpaceType, ConversationSummaryEntry, ConversationThread
 )
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging with more detail
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
+
+# Log startup
+logger.info("=" * 70)
+logger.info("HIVEMIND MCP SERVER STARTING")
+logger.info("=" * 70)
 
 # Initialize Flask
 app = Flask(__name__)
@@ -53,7 +61,20 @@ logger.info(f"MCP server configured for user: {CONFIGURED_USER_ID}")
 # On Railway, credentials come from GOOGLE_APPLICATION_CREDENTIALS_JSON env var
 # Locally, we can use a file path
 FIREBASE_CREDS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON") or r"C:\Users\james\Downloads\hivemind-476519-d174ae36378a.json"
-space_manager = SpaceManager(use_firestore=True, credentials_path=FIREBASE_CREDS)
+
+if os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON"):
+    logger.info("Using GOOGLE_APPLICATION_CREDENTIALS_JSON from environment")
+else:
+    logger.info(f"Using local credentials file: {FIREBASE_CREDS}")
+
+logger.info("Initializing SpaceManager with Firestore...")
+try:
+    space_manager = SpaceManager(use_firestore=True, credentials_path=FIREBASE_CREDS)
+    logger.info("SpaceManager initialized successfully!")
+except Exception as e:
+    logger.error(f"FAILED to initialize SpaceManager: {e}")
+    logger.exception("Full traceback:")
+    raise
 
 # Cleanup expired tokens on startup
 try:
