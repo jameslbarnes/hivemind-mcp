@@ -53,9 +53,22 @@ class FirestoreBackend:
 
                     # Fix private_key: Firebase needs actual newlines, not \n text
                     # The JSON may have literal \n in the string which needs to be converted to actual newlines
-                    if 'private_key' in cred_dict and '\\n' in cred_dict['private_key']:
-                        # Replace the escaped newlines with actual newlines
-                        cred_dict['private_key'] = cred_dict['private_key'].replace('\\n', '\n')
+                    if 'private_key' in cred_dict:
+                        pk = cred_dict['private_key']
+                        # Debug: check what we actually have
+                        print(f"DEBUG: private_key first 100 chars: {repr(pk[:100])}")
+                        print(f"DEBUG: contains \\\\n: {'\\n' in pk}")
+                        print(f"DEBUG: contains actual newline: {chr(10) in pk}")
+
+                        # Try to fix the newlines - handle both cases
+                        if '\\n' in pk:
+                            print("DEBUG: Replacing \\\\n with newlines")
+                            cred_dict['private_key'] = pk.replace('\\n', '\n')
+                        elif '\n' not in pk and '-----BEGIN' in pk:
+                            # No newlines at all but it looks like a PEM key - might be double-escaped
+                            print("DEBUG: No newlines found but looks like PEM, trying to fix...")
+                            # This shouldn't happen but just in case
+                            pass
 
                     cred = credentials.Certificate(cred_dict)
                     firebase_admin.initialize_app(cred)
