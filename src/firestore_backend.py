@@ -51,24 +51,29 @@ class FirestoreBackend:
                         except json.JSONDecodeError as e2:
                             raise ValueError(f"Failed to parse credentials JSON: {e}. Make sure the JSON is properly formatted. Error at position {e.pos}: {credentials_path[max(0,e.pos-20):e.pos+20]}")
 
-                    # Fix private_key: Firebase needs actual newlines, not \n text
-                    # The JSON may have literal \n in the string which needs to be converted to actual newlines
+                    # Fix private_key: Firebase needs properly formatted PEM
                     if 'private_key' in cred_dict:
                         pk = cred_dict['private_key']
-                        # Debug: check what we actually have
-                        print(f"DEBUG: private_key first 100 chars: {repr(pk[:100])}")
-                        print(f"DEBUG: contains \\\\n: {'\\n' in pk}")
-                        print(f"DEBUG: contains actual newline: {chr(10) in pk}")
 
-                        # Try to fix the newlines - handle both cases
-                        if '\\n' in pk:
-                            print("DEBUG: Replacing \\\\n with newlines")
-                            cred_dict['private_key'] = pk.replace('\\n', '\n')
-                        elif '\n' not in pk and '-----BEGIN' in pk:
-                            # No newlines at all but it looks like a PEM key - might be double-escaped
-                            print("DEBUG: No newlines found but looks like PEM, trying to fix...")
-                            # This shouldn't happen but just in case
-                            pass
+                        # Railway may have word-wrapped the JSON, adding spaces/newlines in wrong places
+                        # Fix common PEM formatting issues:
+                        # 1. Remove any spaces between lines that broke up BEGIN/END markers
+                        # 2. Ensure proper PEM format with correct newlines
+
+                        # First, fix broken BEGIN/END markers by removing extra spaces and newlines
+                        pk = pk.replace('-----BEGIN PRIVATE\n  KEY-----', '-----BEGIN PRIVATE KEY-----')
+                        pk = pk.replace('-----END PRIVATE\n  KEY-----', '-----END PRIVATE KEY-----')
+                        pk = pk.replace('-----BEGIN PRIVATE \nKEY-----', '-----BEGIN PRIVATE KEY-----')
+                        pk = pk.replace('-----END PRIVATE \nKEY-----', '-----END PRIVATE KEY-----')
+
+                        # Also handle if there are other spacing issues
+                        import re
+                        # Fix BEGIN marker with any whitespace issues
+                        pk = re.sub(r'-----BEGIN\s+PRIVATE\s+KEY-----', '-----BEGIN PRIVATE KEY-----', pk)
+                        pk = re.sub(r'-----END\s+PRIVATE\s+KEY-----', '-----END PRIVATE KEY-----', pk)
+
+                        cred_dict['private_key'] = pk
+                        print(f"DEBUG: Fixed private_key starts with: {repr(pk[:60])}")
 
                     cred = credentials.Certificate(cred_dict)
                     firebase_admin.initialize_app(cred)
