@@ -895,7 +895,10 @@ def main():
     print("5. Click 'Add'")
     print("\n" + "="*70 + "\n")
 
-    app.run(host='0.0.0.0', port=8080, debug=True, threaded=True)
+    # Use Railway's PORT or default to 8080 for local development
+    port = int(os.getenv('PORT', 8080))
+    logger.info(f"Starting server on port {port}...")
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
 
 
 if __name__ == '__main__':
