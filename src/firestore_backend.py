@@ -73,7 +73,6 @@ class FirestoreBackend:
                         pk = re.sub(r'-----END\s+PRIVATE\s+KEY-----', '-----END PRIVATE KEY-----', pk)
 
                         cred_dict['private_key'] = pk
-                        print(f"DEBUG: Fixed private_key starts with: {repr(pk[:60])}")
 
                     cred = credentials.Certificate(cred_dict)
                     firebase_admin.initialize_app(cred)
