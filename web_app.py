@@ -29,8 +29,26 @@ app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
 
 # Initialize managers with Firestore
-FIREBASE_CREDS = r"C:\Users\james\Downloads\hivemind-476519-d174ae36378a.json"
-space_manager = SpaceManager(use_firestore=True, credentials_path=FIREBASE_CREDS)
+FIREBASE_CREDS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON") or r"C:\Users\james\Downloads\hivemind-476519-d174ae36378a.json"
+
+print("=" * 70)
+print("HIVEMIND WEB APP STARTING")
+print("=" * 70)
+
+if os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON"):
+    print("Using GOOGLE_APPLICATION_CREDENTIALS_JSON from environment")
+else:
+    print(f"Using local credentials file: {FIREBASE_CREDS}")
+
+print("Initializing SpaceManager with Firestore...")
+try:
+    space_manager = SpaceManager(use_firestore=True, credentials_path=FIREBASE_CREDS)
+    print("SpaceManager initialized successfully!")
+except Exception as e:
+    print(f"FAILED to initialize SpaceManager: {e}")
+    import traceback
+    traceback.print_exc()
+    raise
 
 # Initialize PolicyEngine with Anthropic client for LLM-based routing
 import anthropic
